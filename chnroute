@@ -1,0 +1,24 @@
+#!/bin/sh -e
+
+if [ "$1" = '-f' ]; then
+  echo force run
+  IFACE=eth0
+else
+  [ "$IFACE" = eth0 ] || exit 0
+  [ "$MODE" = start ] || exit 0
+fi
+
+CONFDIR=/etc/network/chnroutes
+
+ip route flush table 200
+for f in $CONFDIR/*; do
+  if [ "$f" = "$CONFDIR/chnroute" ]; then
+    continue
+  fi
+  while read p; do
+    if ! ip route add "$p" via 104.131.144.1 dev "$IFACE" table 200 proto static; then
+      [ "$1" = '-f' ] || exit 1
+      echo "$f: $p"
+    fi
+  done < "$f"
+done
