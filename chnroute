@@ -1,22 +1,32 @@
 #!/bin/sh -e
 
+#DISABLE_IPV6=1
+
 if [ "$1" = '-f' ]; then
   echo force run
-  IFACE=eth0
-else
-  [ "$IFACE" = eth0 ] || exit 0
-  [ "$MODE" = start ] || exit 0
 fi
 
-CONFDIR=/etc/network/chnroutes
+if [ -z "$2" ]; then
+  [ "$INTERFACE" = cf ] || exit 0
+  [ "$ACTION" = ifup ] || exit 0
+else
+  DEVICE="$2"
+  echo run on "$2"
+fi
 
-ip route flush table 200
+CONFDIR=/etc/chnroutes
+
+ip r f proto 114
+ip -6 r f proto 114
 for f in $CONFDIR/*; do
   if [ "$f" = "$CONFDIR/chnroute" ]; then
     continue
   fi
+  grep -qF skip "$f" && continue
   while read p; do
-    if ! ip route add "$p" via 104.131.144.1 dev "$IFACE" table 200 proto static; then
+    echo "$p" | grep -qF '#' && continue
+    [ "$DISABLE_IPV6" = 1 ] && echo "$p" | grep -qF : && continue
+    if ! ip r a "$p" dev "$DEVICE" proto 114; then
       [ "$1" = '-f' ] || exit 1
       echo "$f: $p"
     fi
